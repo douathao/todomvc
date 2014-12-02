@@ -27,9 +27,24 @@
 			<div class="view">
 				<input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %>>
 				<label><%- title %></label>
+				<button class="addSub"></button>
 				<button class="destroy"></button>
 			</div>
 			<input class="edit" value="<%- title %>">
+			<% if (subTodo.length > 0) { %>
+			    <ul class="subTodo">
+			    	<% _.each(subTodo, function (sub, index) { %>
+			    		<li class="<%= completed ? 'completed' : '' %>" data-sub-id="<%= index %>">
+					    	<div class="view">
+								<input class="toggle" type="checkbox" <%= sub.completed ? 'checked' : '' %>>
+								<label><%= sub.title %></label>
+								<button class="destroy"></button>
+							</div>
+							<input class="edit" value="<%- sub.title %>">
+						</li>
+			    	<% }) %>
+			    </ul>
+			<% } %>
 		</script>
 		<script type="text/template" id="stats-template">
 			<span id="todo-count"><strong><%= remaining %></strong> <%= remaining === 1 ? 'item' : 'items' %> left</span>

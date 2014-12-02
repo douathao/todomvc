@@ -17,12 +17,17 @@ var app = app || {};
 
 		// The DOM events specific to an item.
 		events: {
-			'click .toggle': 'toggleCompleted',
-			'dblclick label': 'edit',
-			'click .destroy': 'clear',
-			'keypress .edit': 'updateOnEnter',
+			'click .toggle:first': 'toggleCompleted',
+			'click .subTodo .toggle': 'toggleSubCompleted',
+			'dblclick label:first': 'edit',
+			'dblclick .subTodo label': 'editSub',
+			'click .destroy:first': 'clear',
+			'keypress .edit, keypress .subTodo .edit': 'updateOnEnter',
 			'keydown .edit': 'revertOnEscape',
-			'blur .edit': 'close'
+			'blur .edit': 'close',
+			'blur .subTodo .edit': 'closeSubEdit',
+			'click .addSub': 'addSubTodo',
+			'click .subTodo .destroy': 'removeSub'
 		},
 
 		// The TodoView listens for changes to its model, re-rendering. Since
@@ -51,7 +56,7 @@ var app = app || {};
 			this.$el.html(this.template(this.model.toJSON()));
 			this.$el.toggleClass('completed', this.model.get('completed'));
 			this.toggleVisible();
-			this.$input = this.$('.edit');
+			this.$input = this.$('.edit:first');
 			return this;
 		},
 
@@ -66,14 +71,30 @@ var app = app || {};
 		},
 
 		// Toggle the `"completed"` state of the model.
-		toggleCompleted: function () {
-			this.model.toggle();
+		toggleCompleted: function (event) {
+			if (this.model.get('subTodo').length === 0) {
+				this.model.toggle();
+			} else {
+				event.preventDefault();
+			}
+		},
+
+		toggleSubCompleted: function (event) {
+			var subIndex = this.$(event.currentTarget).parents('li:first').attr('data-sub-id');
+
+			this.model.toggleSub(subIndex);
 		},
 
 		// Switch this view into `"editing"` mode, displaying the input field.
 		edit: function () {
 			this.$el.addClass('editing');
 			this.$input.focus();
+		},
+
+		editSub: function (event) {
+			this.$subInput = this.$(event.currentTarget).parents('li:first').addClass('editing').find('input.edit');
+
+			this.$subInput.focus();
 		},
 
 		// Close the `"editing"` mode, saving changes to the todo.
@@ -106,11 +127,36 @@ var app = app || {};
 
 			this.$el.removeClass('editing');
 		},
+		closeSubEdit: function () {
+			var $li = this.$subInput.parents('li:first'),
+				index = $li.attr('data-sub-id'),
+				value = this.$subInput.val(),
+				trimmedValue = value.trim();
+
+			if (!$li.hasClass('editing')) {
+				return;
+			}
+
+			if (trimmedValue) {
+				this.model.updateSubTitle(index, trimmedValue);
+
+			} else {
+				this.removeSub(index);
+			}
+
+			$li.removeClass('editing');
+		},
 
 		// If you hit `enter`, we're through editing the item.
 		updateOnEnter: function (e) {
+			var list;
 			if (e.which === ENTER_KEY) {
-				this.close();
+				list = this.$(e.currentTarget).parents('ul').first().attr('class');
+				if (list === 'subTodo') {
+					this.closeSubEdit();
+				} else {
+					this.close();
+				}
 			}
 		},
 
@@ -127,6 +173,19 @@ var app = app || {};
 		// Remove the item, destroy the model from *localStorage* and delete its view.
 		clear: function () {
 			this.model.destroy();
+		},
+
+		removeSub: function (event) {
+			var subIndex = this.$(event.currentTarget).parents('li:first').attr('data-sub-id');
+
+			this.model.removeSub(subIndex);
+		},
+
+		addSubTodo: function () {
+			this.model.addSubTodo();
+			this.$subInput = this.$('.subTodo li:last input.edit');
+			this.$subInput.parents('li:first').addClass('editing');
+			this.$subInput.focus();
 		}
 	});
 })(jQuery);
